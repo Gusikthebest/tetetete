@@ -16,7 +16,7 @@
 <body class="flex flex-col items-center justify-center min-h-screen p-4">
     <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
         <h1 class="text-2xl font-bold text-center text-gray-800 mb-4">Telegram Mini App</h1>
-        <div id="status" class="text-center text-gray-600 mb-4"></div>
+        <div id="status" class="text-center text-gray-600 mb-4">Инициализация...</div>
         <div id="account-info" class="hidden bg-gray-100 p-4 rounded mb-4"></div>
         <div id="script-container" class="hidden bg-gray-100 p-4 rounded mb-4">
             <pre id="script-content" class="text-sm text-gray-800 overflow-auto"></pre>
@@ -30,8 +30,15 @@
     </div>
 
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.ready();
+        const tg = window.Telegram?.WebApp;
+        if (!tg) {
+            document.getElementById('status').textContent = '❌ Ошибка: Telegram Web Apps API не загружен';
+            console.error('Telegram Web Apps API is not loaded');
+        } else {
+            tg.ready();
+            document.getElementById('status').textContent = '✅ Mini App готов. Выбери действие.';
+            console.log('Telegram Web Apps initialized:', tg.initDataUnsafe);
+        }
 
         const status = document.getElementById('status');
         const accountInfo = document.getElementById('account-info');
@@ -42,23 +49,34 @@
         const copyScriptBtn = document.getElementById('copy-script');
         const showInfoBtn = document.getElementById('show-info');
 
-        // Инициализация: установка статуса
-        status.textContent = '🚫 Аккаунт не привязан. Нажми "Привязать аккаунт".';
-
         // Привязка аккаунта
         linkAccountBtn.addEventListener('click', () => {
-            tg.sendMessage('/link');
-            status.textContent = '🔗 Отправь команду /link КОД в чат с ботом (код из Discord /gen_link)';
+            if (tg) {
+                tg.sendMessage('/link');
+                status.textContent = '🔗 Отправь /link КОД в чат с ботом (код из Discord /gen_link)';
+                tg.showAlert('Отправлена команда /link. Введи код в чате.');
+            } else {
+                status.textContent = '❌ Ошибка: Telegram Web Apps не доступен';
+            }
         });
 
         // Получение скрипта
         getScriptBtn.addEventListener('click', () => {
-            tg.sendMessage('/confirm');
-            status.textContent = '✅ Отправь команду /confirm КОД в чат с ботом (код из Discord /gen_alt)';
+            if (tg) {
+                tg.sendMessage('/confirm');
+                status.textContent = '📜 Отправь /confirm КОД в чат с ботом (код из Discord /gen_alt)';
+                tg.showAlert('Отправлена команда /confirm. Введи код в чате.');
+            } else {
+                status.textContent = '❌ Ошибка: Telegram Web Apps не доступен';
+            }
         });
 
         // Копирование скрипта в буфер
         copyScriptBtn.addEventListener('click', () => {
+            if (!scriptContent.textContent) {
+                tg.showAlert('Сначала получи скрипт через /confirm КОД в чате!');
+                return;
+            }
             navigator.clipboard.writeText(scriptContent.textContent).then(() => {
                 tg.showAlert('Скрипт скопирован в буфер обмена!');
             }).catch(() => {
@@ -68,8 +86,13 @@
 
         // Показ информации об аккаунте
         showInfoBtn.addEventListener('click', () => {
-            tg.sendMessage('/info');
-            status.textContent = 'ℹ️ Информация отправлена в чат с ботом';
+            if (tg) {
+                tg.sendMessage('/info');
+                status.textContent = 'ℹ️ Информация отправлена в чат с ботом';
+                tg.showAlert('Отправлена команда /info. Проверь чат.');
+            } else {
+                status.textContent = '❌ Ошибка: Telegram Web Apps не доступен';
+            }
         });
     </script>
 </body>
