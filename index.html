@@ -34,11 +34,11 @@
         if (!tg) {
             document.getElementById('status').textContent = '❌ Ошибка: Telegram Web Apps API не загружен';
             console.error('Telegram Web Apps API is not loaded');
-        } else {
-            tg.ready();
-            document.getElementById('status').textContent = '✅ Mini App готов. Выбери действие.';
-            console.log('Telegram Web Apps initialized:', tg.initDataUnsafe);
+            return;
         }
+        tg.ready();
+        document.getElementById('status').textContent = '✅ Mini App готов. Выбери действие.';
+        console.log('Telegram Web Apps initialized:', tg.initDataUnsafe);
 
         const status = document.getElementById('status');
         const accountInfo = document.getElementById('account-info');
@@ -49,32 +49,65 @@
         const copyScriptBtn = document.getElementById('copy-script');
         const showInfoBtn = document.getElementById('show-info');
 
+        const SERVER_URL = 'https://your-vercel-app.vercel.app';
+
+        // Проверка привязки аккаунта при загрузке
+        async function checkAccount() {
+            try {
+                const response = await fetch(`${SERVER_URL}/check_account`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegram_id: tg.initDataUnsafe.user.id })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    status.textContent = `✅ Аккаунт привязан к Discord ID: ${data.discord_id}`;
+                    linkAccountBtn.classList.add('hidden');
+                } else {
+                    status.textContent = '🚫 Аккаунт не привязан. Нажми "Привязать аккаунт".';
+                }
+            } catch (e) {
+                status.textContent = '❌ Ошибка проверки аккаунта';
+                console.error(e);
+                tg.showAlert('Ошибка связи с сервером');
+            }
+        }
+
         // Привязка аккаунта
         linkAccountBtn.addEventListener('click', () => {
-            if (tg) {
-                tg.sendMessage('/link');
-                status.textContent = '🔗 Отправь /link КОД в чат с ботом (код из Discord /gen_link)';
-                tg.showAlert('Отправлена команда /link. Введи код в чате.');
-            } else {
-                status.textContent = '❌ Ошибка: Telegram Web Apps не доступен';
-            }
+            tg.sendMessage('/link');
+            status.textContent = '🔗 Отправь /link КОД в чат с ботом (код из Discord /gen_link)';
+            tg.showAlert('Отправлена команда /link. Введи код в чате.');
         });
 
         // Получение скрипта
-        getScriptBtn.addEventListener('click', () => {
-            if (tg) {
-                tg.sendMessage('/confirm');
-                status.textContent = '📜 Отправь /confirm КОД в чат с ботом (код из Discord /gen_alt)';
-                tg.showAlert('Отправлена команда /confirm. Введи код в чате.');
-            } else {
-                status.textContent = '❌ Ошибка: Telegram Web Apps не доступен';
+        getScriptBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch(`${SERVER_URL}/get_script`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegram_id: tg.initDataUnsafe.user.id })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    scriptContent.textContent = data.script;
+                    scriptContainer.classList.remove('hidden');
+                    status.textContent = '📜 Скрипт получен!';
+                } else {
+                    status.textContent = data.message || '❌ Ошибка получения скрипта';
+                    tg.showAlert(data.message || 'Ошибка получения скрипта');
+                }
+            } catch (e) {
+                status.textContent = '❌ Ошибка сервера';
+                console.error(e);
+                tg.showAlert('Ошибка связи с сервером');
             }
         });
 
         // Копирование скрипта в буфер
         copyScriptBtn.addEventListener('click', () => {
             if (!scriptContent.textContent) {
-                tg.showAlert('Сначала получи скрипт через /confirm КОД в чате!');
+                tg.showAlert('Сначала получи скрипт!');
                 return;
             }
             navigator.clipboard.writeText(scriptContent.textContent).then(() => {
@@ -85,15 +118,34 @@
         });
 
         // Показ информации об аккаунте
-        showInfoBtn.addEventListener('click', () => {
-            if (tg) {
-                tg.sendMessage('/info');
-                status.textContent = 'ℹ️ Информация отправлена в чат с ботом';
-                tg.showAlert('Отправлена команда /info. Проверь чат.');
-            } else {
-                status.textContent = '❌ Ошибка: Telegram Web Apps не доступен';
+        showInfoBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch(`${SERVER_URL}/account_info`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegram_id: tg.initDataUnsafe.user.id })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    accountInfo.innerHTML = `🔗 <b>Привязанный Discord ID:</b> ${data.discord_id}`;
+                    accountInfo.classList.remove('hidden');
+                    scriptContainer.classList.add('hidden');
+                    status.textContent = 'ℹ️ Информация об аккаунте отображена';
+                } else {
+                    accountInfo.innerHTML = '🚫 Аккаунт не привязан';
+                    accountInfo.classList.remove('hidden');
+                    scriptContainer.classList.add('hidden');
+                    status.textContent = data.message || '🚫 Аккаунт не привязан';
+                }
+            } catch (e) {
+                status.textContent = '❌ Ошибка получения информации';
+                console.error(e);
+                tg.showAlert('Ошибка связи с сервером');
             }
         });
+
+        // Инициализация
+        checkAccount();
     </script>
 </body>
 </html>
