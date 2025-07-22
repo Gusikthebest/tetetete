@@ -49,28 +49,9 @@
         const copyScriptBtn = document.getElementById('copy-script');
         const showInfoBtn = document.getElementById('show-info');
 
-        const SERVER_URL = 'https://vercel-rep-y5lj.vercel.app';
-
         // Проверка привязки аккаунта при загрузке
-        async function checkAccount() {
-            try {
-                const response = await fetch(`${SERVER_URL}/check_account`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ telegram_id: tg.initDataUnsafe.user.id })
-                });
-                const data = await response.json();
-                if (data.success) {
-                    status.textContent = `✅ Аккаунт привязан к Discord ID: ${data.discord_id}`;
-                    linkAccountBtn.classList.add('hidden');
-                } else {
-                    status.textContent = '🚫 Аккаунт не привязан. Нажми "Привязать аккаунт".';
-                }
-            } catch (e) {
-                status.textContent = '❌ Ошибка проверки аккаунта';
-                console.error(e);
-                tg.showAlert('Ошибка связи с сервером');
-            }
+        function checkAccount() {
+            tg.sendMessage('/info');
         }
 
         // Привязка аккаунта
@@ -81,27 +62,10 @@
         });
 
         // Получение скрипта
-        getScriptBtn.addEventListener('click', async () => {
-            try {
-                const response = await fetch(`${SERVER_URL}/get_script`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ telegram_id: tg.initDataUnsafe.user.id })
-                });
-                const data = await response.json();
-                if (data.success) {
-                    scriptContent.textContent = data.script;
-                    scriptContainer.classList.remove('hidden');
-                    status.textContent = '📜 Скрипт получен!';
-                } else {
-                    status.textContent = data.message || '❌ Ошибка получения скрипта';
-                    tg.showAlert(data.message || 'Ошибка получения скрипта');
-                }
-            } catch (e) {
-                status.textContent = '❌ Ошибка сервера';
-                console.error(e);
-                tg.showAlert('Ошибка связи с сервером');
-            }
+        getScriptBtn.addEventListener('click', () => {
+            tg.sendMessage('/confirm');
+            status.textContent = '📜 Отправь /confirm КОД в чат с ботом (код из Discord /gen_alt)';
+            tg.showAlert('Отправлена команда /confirm. Введи код в чате.');
         });
 
         // Копирование скрипта в буфер
@@ -118,29 +82,37 @@
         });
 
         // Показ информации об аккаунте
-        showInfoBtn.addEventListener('click', async () => {
+        showInfoBtn.addEventListener('click', () => {
+            tg.sendMessage('/info');
+        });
+
+        // Обработка сообщений от бота
+        tg.onEvent('mainButtonClicked', () => {
+            tg.sendMessage('/info');
+        });
+
+        tg.onEvent('message', (msg) => {
             try {
-                const response = await fetch(`${SERVER_URL}/account_info`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ telegram_id: tg.initDataUnsafe.user.id })
-                });
-                const data = await response.json();
-                if (data.success) {
+                const data = JSON.parse(msg.text);
+                if (data.type === 'script') {
+                    scriptContent.textContent = data.content;
+                    scriptContainer.classList.remove('hidden');
+                    accountInfo.classList.add('hidden');
+                    status.textContent = '📜 Скрипт получен!';
+                } else if (data.type === 'info') {
                     accountInfo.innerHTML = `🔗 <b>Привязанный Discord ID:</b> ${data.discord_id}`;
                     accountInfo.classList.remove('hidden');
                     scriptContainer.classList.add('hidden');
                     status.textContent = 'ℹ️ Информация об аккаунте отображена';
-                } else {
-                    accountInfo.innerHTML = '🚫 Аккаунт не привязан';
-                    accountInfo.classList.remove('hidden');
-                    scriptContainer.classList.add('hidden');
-                    status.textContent = data.message || '🚫 Аккаунт не привязан';
+                    linkAccountBtn.classList.add('hidden');
+                } else if (data.type === 'status') {
+                    status.textContent = data.content;
+                    if (data.content.includes('Твой аккаунт не привязан') || data.content.includes('Привязка отменена')) {
+                        linkAccountBtn.classList.remove('hidden');
+                    }
                 }
             } catch (e) {
-                status.textContent = '❌ Ошибка получения информации';
-                console.error(e);
-                tg.showAlert('Ошибка связи с сервером');
+                console.error('Ошибка обработки сообщения:', e);
             }
         });
 
