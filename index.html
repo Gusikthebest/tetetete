@@ -42,54 +42,19 @@
         const copyScriptBtn = document.getElementById('copy-script');
         const showInfoBtn = document.getElementById('show-info');
 
-        // Инициализация: проверка привязки аккаунта
-        async function checkAccount() {
-            try {
-                const response = await fetch('https://your-server-url/check_account', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ telegram_id: tg.initDataUnsafe.user.id })
-                });
-                const data = await response.json();
-                if (data.linked) {
-                    status.textContent = `✅ Аккаунт привязан к Discord ID: ${data.discord_id}`;
-                    linkAccountBtn.classList.add('hidden');
-                } else {
-                    status.textContent = '🚫 Аккаунт не привязан. Нажми "Привязать аккаунт".';
-                }
-            } catch (e) {
-                status.textContent = '❌ Ошибка проверки аккаунта';
-                console.error(e);
-            }
-        }
+        // Инициализация: установка статуса
+        status.textContent = '🚫 Аккаунт не привязан. Нажми "Привязать аккаунт".';
 
         // Привязка аккаунта
         linkAccountBtn.addEventListener('click', () => {
             tg.sendMessage('/link');
-            status.textContent = '🔗 Отправь команду /link КОД в чат с ботом';
+            status.textContent = '🔗 Отправь команду /link КОД в чат с ботом (код из Discord /gen_link)';
         });
 
         // Получение скрипта
-        getScriptBtn.addEventListener('click', async () => {
-            try {
-                const response = await fetch('https://your-server-url/get_script', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ telegram_id: tg.initDataUnsafe.user.id })
-                });
-                const data = await response.json();
-                if (data.success) {
-                    scriptContent.textContent = data.script;
-                    scriptContainer.classList.remove('hidden');
-                    status.textContent = '📜 Скрипт получен!';
-                } else {
-                    status.textContent = data.message || '❌ Ошибка получения скрипта';
-                    tg.sendMessage('/confirm');
-                }
-            } catch (e) {
-                status.textContent = '❌ Ошибка сервера';
-                console.error(e);
-            }
+        getScriptBtn.addEventListener('click', () => {
+            tg.sendMessage('/confirm');
+            status.textContent = '✅ Отправь команду /confirm КОД в чат с ботом (код из Discord /gen_alt)';
         });
 
         // Копирование скрипта в буфер
@@ -102,32 +67,10 @@
         });
 
         // Показ информации об аккаунте
-        showInfoBtn.addEventListener('click', async () => {
-            try {
-                const response = await fetch('https://your-server-url/account_info', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ telegram_id: tg.initDataUnsafe.user.id })
-                });
-                const data = await response.json();
-                if (data.linked) {
-                    accountInfo.innerHTML = `🔗 <b>Привязанный Discord ID:</b> ${data.discord_id}`;
-                    accountInfo.classList.remove('hidden');
-                    scriptContainer.classList.add('hidden');
-                    status.textContent = 'ℹ️ Информация об аккаунте отображена';
-                } else {
-                    accountInfo.innerHTML = '🚫 Аккаунт не привязан';
-                    accountInfo.classList.remove('hidden');
-                    scriptContainer.classList.add('hidden');
-                }
-            } catch (e) {
-                status.textContent = '❌ Ошибка получения информации';
-                console.error(e);
-            }
+        showInfoBtn.addEventListener('click', () => {
+            tg.sendMessage('/info');
+            status.textContent = 'ℹ️ Информация отправлена в чат с ботом';
         });
-
-        // Инициализация
-        checkAccount();
     </script>
 </body>
 </html>
